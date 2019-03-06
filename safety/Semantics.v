@@ -76,7 +76,10 @@ Inductive HasType : Context -> Expr -> Tuple -> Prop :=
       HasType ctx (Diag e) (d::t)
   | T_Expand : forall (ctx:Context) (e:Expr) (t:Tuple) (d:nat),
       HasType ctx e t ->
-      HasType ctx (Expand d e) (d::t).
+      HasType ctx (Expand d e) (d::t)
+  | T_Red : forall (ctx:Context) (e:Expr) (t:Tuple) (d:nat),
+      HasType ctx e (d::t) ->
+      HasType ctx (Red e) t.
 
 Hint Constructors HasType.
 
@@ -194,6 +197,10 @@ Fixpoint compute_type (ctx:Context) (e:Expr) : option Tuple :=
                       | Some d => Some (m::d)
                       | _ => None
                     end
+    | Red e => match compute_type ctx e with
+                 | Some (d::t) => Some t
+                 | _ => None
+               end
   end.
 
 
@@ -227,6 +234,8 @@ Proof with auto.
         apply Nat.eqb_neq in deq; contradiction.
       (* Expand *)
       apply IHe in H4; rewrite H4...
+      (* Red *)
+      apply IHe in H2; rewrite H2...
     (* <- *)
     generalize dependent ctx; generalize dependent t. induction e;
     intros t ctx H; inversion H; subst; simpl...
@@ -277,6 +286,11 @@ Proof with auto.
         destruct t; inversion H1; subst.
         apply T_Expand...
         inversion H1.
+      (* Red *)
+      destruct (compute_type ctx e) eqn:eeq. apply IHe in eeq.
+        destruct t0; inversion H1; subst.
+        apply T_Red with (d:=n)...
+        inversion H1.
 Qed.
 
 
@@ -290,6 +304,18 @@ Fixpoint sem_contract (i:Tuple) (b:nat) (f:Tuple -> Value) : Value :=
     | 0 => VSome
     | S b' => match f (b'::b'::i) with
                 | VSome => sem_contract i b' f
+                | _ => VUndef
+              end
+  end.
+
+
+(* Reduction of the first dimension in a tensor up to bound 'b': *)
+
+Fixpoint sem_reduce (i:Tuple) (b:nat) (f:Tuple -> Value) : Value :=
+  match b with
+    | 0 => VSome
+    | S b' => match f (b'::i) with
+                | VSome => sem_reduce i b' f
                 | _ => VUndef
               end
   end.
@@ -351,6 +377,11 @@ Fixpoint eval (ctx:Context) (mu:Memory) (e:Expr) (i:Tuple) : Value :=
                     | i0::i' => eval ctx mu e i'
                     | _ => VUndef
                   end
+    | Red e => match compute_type ctx e with
+                 | Some (d::_) => let x := (fun j => eval ctx mu e j) in
+                                    sem_reduce i (S d) x
+                 | _ => VUndef
+               end
   end.
 
 
@@ -555,6 +586,27 @@ Proof with auto.
   apply Ev...
 Qed.
 
+Lemma sem_eval_well_defined_Red : 
+  forall (e:Expr) (decls:Decls) (ctx:Context) (mu:Memory) (t:Tuple) (d:nat),
+    CtxCompatible decls ctx ->
+    MemCompatible decls mu ->
+    HasType ctx e (d::t) ->
+    (forall (i:Tuple), i.<=.(d::t) -> eval ctx mu e i = VSome) ->
+      forall (i:Tuple), i.<=.t -> eval ctx mu (Red e) i = VSome.
+Proof with auto.
+  intros e decls ctx mu t d CompC CompM Ht Ev i le.
+  apply sem_typing_computable in Ht. simpl. rewrite Ht.
+  assert((d::i).<=.(d::t)). simpl; intuition...
+  rewrite (Ev _ H). clear H.
+  clear Ht. induction d...
+    unfold sem_reduce. fold sem_reduce.
+    assert((d::i).<=.((S d)::t)). simpl; intuition...
+    rewrite (Ev _ H).
+    apply IHd. intuition... apply Ev. apply (tup_le_trans _ (d::t))...
+      simpl; intuition... apply tup_le_refl.
+Qed.
+
+
 (* Finally, well-definedness of 'eval': *)
 
 Lemma sem_eval_well_defined' : 
@@ -600,6 +652,10 @@ Proof with auto.
     (* Expand *)
     intros t CompC CompM Ht i le. inversion Ht. subst.
     apply (sem_eval_well_defined_Expand e decls ctx mu t0 n)...
+    apply IHe...
+    (* Red *)
+    intros t CompC CompM Ht i le. inversion Ht. subst.
+    apply (sem_eval_well_defined_Red e decls ctx mu t d)...
     apply IHe...
 Qed.
 

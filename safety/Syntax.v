@@ -55,7 +55,10 @@ Inductive Expr : Set :=
   (* Take the diagonal of the first two dimensions: *)
   | Diag   : Expr -> Expr
   (* Expand in the first dimension: *)
-  | Expand : nat -> Expr -> Expr.
+  | Expand : nat -> Expr -> Expr
+  (* Reduce over the first dimension: *)
+  | Red    : Expr -> Expr.
+
 
 (* Notes on the generality of expressions:                          *)
 (*   - Arbitrary transpositions of dimensions can be obtained       *)
@@ -72,6 +75,8 @@ Inductive Expr : Set :=
 (*     transpositions.                                              *)
 (*   - Expansion in an arbitrary dimension can be obtained by pre-  *)
 (*     and post-composing 'Expand' with suitable transpositions.    *)
+(*   - Reduction over an arbitrary dimension can be obtained by     *)
+(*     pre- and post-composing 'Red' with suitable transpositions.  *)
 
 
 (* Statements assign expressions to identifiers: *)
