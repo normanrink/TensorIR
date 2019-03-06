@@ -89,7 +89,6 @@ Hint Constructors HasType.
 
 Inductive OK_Stmt : Context -> Stmt -> Prop :=
   | OK_stmt : forall (ctx:Context) (x:Id) (t:Tuple) (e:Expr),
-      CtxInDomain x ctx ->
       ctx x = Some t ->
       HasType ctx e t ->
         OK_Stmt ctx (StmtAssign x e).
@@ -124,8 +123,9 @@ Proof with auto.
   intros decls ctx x e stmts Comp OK.
   induction OK.
     inversion 1.
-    intuition. inversion H0...
-      subst. inversion H...
+    intuition. inversion H0... subst.
+      inversion H; subst.
+      apply ctx_domain_domain'... unfold CtxInDomain'. exists t...
 Qed.
 
 
@@ -727,7 +727,7 @@ Lemma sem_step_stmt : forall (ctx:Context) (decls:Decls) (stmt:Stmt),
 Proof with auto.
   intros ctx decls stmt CompC OK.
   destruct stmt. inversion OK. subst.
-  pose proof (mem_extend_preserves_from_decls decls ctx i t CompC H3).
+  pose proof (mem_extend_preserves_from_decls decls ctx i t CompC H2).
   rewrite H at 2.
   apply Step_stmt with (tens := ten_tensor_from_tuple t)...
   apply (mem_from_decls_lookup decls ctx)...
