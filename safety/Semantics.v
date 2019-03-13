@@ -84,6 +84,33 @@ Inductive HasType : Context -> Expr -> Tuple -> Prop :=
 Hint Constructors HasType.
 
 
+Lemma sem_typing_unique : forall (ctx:Context) (e:Expr) (t1 t2:Tuple),
+  HasType ctx e t1 ->
+  HasType ctx e t2 ->
+    t1 = t2.
+Proof with auto.
+  intros ctx e t1 t2 HT. generalize dependent t2.
+  induction HT; intros t2 HT'; inversion HT'; subst...
+    (* Var *)
+    rewrite H in H2. inversion H2...
+    (* Prod *)
+    apply IHHT1 in H2. rewrite H2.
+    apply IHHT2 in H4. rewrite H4...
+    (* Transp *)
+    apply IHHT in H3. rewrite <- H3 in H5. rewrite H in H5. inversion H5...
+    (* Contr *)
+    apply IHHT in H1. inversion H1...
+    (* Proj *)
+    apply IHHT in H3. inversion H3...
+    (* Diag *)
+    apply IHHT in H1. inversion H1...
+    (* Expand *)
+    apply IHHT in H3. inversion H3...
+    (* Red *)
+    apply IHHT in H1. inversion H1...
+Qed.
+
+
 (* Judgements for well-formed statements, *)
 (* sequences of statements, and programs: *)
 
