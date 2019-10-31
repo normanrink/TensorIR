@@ -20,10 +20,7 @@
 
 
 Require Import FunctionalExtensionality.
-Require Import List.
 Require Import PeanoNat.
-
-Import ListNotations.
 
 Require Import TensorIR.Tuple.Tuple.
 
@@ -100,6 +97,8 @@ Proof with auto.
   destruct (x i) eqn:xieq... apply H in xieq. contradiction.
 Qed.
 
+
+Open Scope list_scope.
 
 (* Tensors with a bound of '[]' (i.e. the empty tuple) have exactly *)
 (* one entry. Such tensors should be thought of as scalars:         *)
@@ -217,4 +216,6 @@ Proof with auto.
     apply tup_nle_nleb in itle. apply ten_domain_nle_domain in H.
       unfold DomainBound_nle in H. apply H in itle...
 Qed.
+
+Close Scope list_scope.
 

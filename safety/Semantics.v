@@ -27,8 +27,6 @@
 Require Import List.
 Require Import PeanoNat.
 
-Import ListNotations.
-
 Require Import TensorIR.Safety.Context.
 Require Import TensorIR.Safety.Memory.
 Require Import TensorIR.Safety.Rlist.
@@ -37,6 +35,8 @@ Require Import TensorIR.Safety.Tensor.
 Require Import TensorIR.Tuple.Tuple.
 
 
+
+Open Scope list_scope.
 
 (* Judgement for well-typed expressions: *)
 
@@ -57,7 +57,7 @@ Inductive HasType : Context -> Expr -> Tuple -> Prop :=
       HasType ctx e1 t ->
       HasType ctx (Mul e0 e1) t
   | T_SMul : forall (ctx:Context) (e0 e1:Expr) (t:Tuple),
-      HasType ctx e0 []%list ->
+      HasType ctx e0 [] ->
       HasType ctx e1 t ->
       HasType ctx (Mul e0 e1) t
   | T_Transp : forall (ctx:Context) (m:nat) (e:Expr) (t t':Tuple) ,
@@ -80,6 +80,8 @@ Inductive HasType : Context -> Expr -> Tuple -> Prop :=
   | T_Red : forall (ctx:Context) (e:Expr) (t:Tuple) (d:nat),
       HasType ctx e (d::t) ->
       HasType ctx (Red e) t.
+
+Close Scope list_scope.
 
 Hint Constructors HasType.
 
@@ -111,6 +113,8 @@ Proof with auto.
 Qed.
 
 
+Open Scope rlist_scope.
+
 (* Judgements for well-formed statements, *)
 (* sequences of statements, and programs: *)
 
@@ -135,6 +139,8 @@ Inductive OK_Prog : Prog -> Prop :=
       CtxCompatible decls ctx ->
       OK_Seq ctx stmts ->
         OK_Prog (decls, stmts).
+
+Close Scope rlist_scope.
 
 
 (* A variable 'x' that is assigned to in a sequence of statements that *)
@@ -174,6 +180,8 @@ Proof with auto.
 Qed.
 
 
+Open Scope list_scope.
+
 (* In order to evaluate expressions, the function 'eval' (to be defined *)
 (* below) must compute types of (sub-)expressions. For this purpose,    *)
 (* a function that computes the type of an expression is defined here.  *)
@@ -192,7 +200,7 @@ Fixpoint compute_type (ctx:Context) (e:Expr) : option Tuple :=
                       | _, _ => None
                     end
     | Mul e0 e1 => match compute_type ctx e0, compute_type ctx e1 with
-                      | Some []%list, Some t => Some t
+                      | Some [], Some t  => Some t
                       | Some t0, Some t1 => if (tup_eq_dec t0 t1)
                                                then Some t0
                                                else None
@@ -376,11 +384,11 @@ Fixpoint eval (ctx:Context) (mu:Memory) (e:Expr) (i:Tuple) : Value :=
                      | _, _ => VUndef
                    end
     | Mul e1 e2 => match compute_type ctx e1 with
-                     | Some []%list => match eval ctx mu e1 []%list,
-                                             eval ctx mu e2 i with
-                                         | VSome, VSome => VSome
-                                         | _, _ => VUndef
-                                   end
+                     | Some [] => match eval ctx mu e1 [],
+                                        eval ctx mu e2 i with
+                                    | VSome, VSome => VSome
+                                    | _, _ => VUndef
+                                  end
                      | _ => match eval ctx mu e1 i, eval ctx mu e2 i with
                               | VSome, VSome => VSome
                               | _, _ => VUndef
@@ -508,7 +516,7 @@ Proof with auto.
   intros e1 e2 decls ctx mu t CompC CompM Ht1 Eval1 Ht2 Eval2 i le.
   apply sem_typing_computable in Ht1.
   simpl. rewrite Ht1. destruct t.
-    rewrite (Eval1 []%list (tup_le_refl []%list)). rewrite (Eval2 i le)...
+    rewrite (Eval1 [] (tup_le_refl [])). rewrite (Eval2 i le)...
     rewrite (Eval1 i le). rewrite (Eval2 i le)...
 Qed.
 
@@ -517,8 +525,8 @@ Lemma sem_eval_well_defined_SMul :
   forall (e1 e2:Expr) (decls:Decls) (ctx:Context) (mu:Memory) (t:Tuple),
     CtxCompatible decls ctx ->
     MemCompatible decls mu ->
-    HasType ctx e1 []%list ->
-    (forall (i:Tuple), i.<=.[]%list -> eval ctx mu e1 i = VSome) ->
+    HasType ctx e1 [] ->
+    (forall (i:Tuple), i.<=.[] -> eval ctx mu e1 i = VSome) ->
     HasType ctx e2 t ->
     (forall (i:Tuple), i.<=.t -> eval ctx mu e2 i = VSome) ->
       forall (i:Tuple), i.<=.t -> eval ctx mu (Mul e1 e2) i = VSome.
@@ -526,7 +534,7 @@ Proof with auto.
   intros e1 e2 decls ctx mu t CompC CompM Ht1 Eval1 Ht2 Eval2 i le.
   apply sem_typing_computable in Ht1.
   simpl. rewrite Ht1.
-  rewrite (Eval1 []%list (tup_le_refl []%list)). rewrite (Eval2 i le)...
+  rewrite (Eval1 [] (tup_le_refl [])). rewrite (Eval2 i le)...
 Qed.
 
 
@@ -633,6 +641,8 @@ Proof with auto.
       simpl; intuition... apply tup_le_refl.
 Qed.
 
+Close Scope list_scope.
+
 
 (* Finally, well-definedness of 'eval': *)
 
@@ -690,6 +700,8 @@ Proof with auto.
 Qed.
 
 
+Open Scope rlist_scope.
+
 (* Dynamic semantics, i.e. evaluation of statements, *)
 (* sequences of statements, and programs:            *)
 
@@ -722,6 +734,8 @@ Inductive Eval_Prog : Prog -> Memory -> Prop :=
                   MemCompatible decls mu ->
                   Step_Seq ctx mu stmts mu' ->
                     Eval_Prog (decls, stmts) mu'.
+
+Close Scope rlist_scope.
 
 
 (* The following lemmas show that evaluation of  *)

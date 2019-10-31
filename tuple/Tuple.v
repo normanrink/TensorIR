@@ -25,6 +25,8 @@ Require Import PeanoNat.
 
 Import ListNotations.
 
+Export ListNotations.
+
 
 
 Definition Tuple := list nat.

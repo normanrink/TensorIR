@@ -45,6 +45,8 @@ Definition ExtendMemory (mu:Memory) (x:Id) (t:Tensor) : Memory :=
   fun x' => if (id_eq_dec x x') then Some t else mu x'.
 
 
+Open Scope rlist_scope.
+
 (* Judgement that a memory is compatible with a sequence of declarations: *)
 
 Inductive MemCompatible : Decls -> Memory -> Prop :=
@@ -155,4 +157,6 @@ Proof with auto.
   unfold ExtendMemory. destruct (id_eq_dec x y)...
   rewrite (mem_from_decls_lookup decls ctx y t)... subst...
 Qed.
+
+Close Scope rlist_scope.
 

@@ -42,6 +42,8 @@ Definition ExtendContext (ctx:Context) (x:Id) (t:Tuple) : Context :=
   fun x' => if (id_eq_dec x x') then Some t else ctx x'.
 
 
+Open Scope rlist_scope.
+
 (* Judgement that a context is compatible with a sequence of declarations: *)
 
 Inductive CtxCompatible : Decls -> Context -> Prop :=
@@ -51,6 +53,7 @@ Inductive CtxCompatible : Decls -> Context -> Prop :=
                 ~(CtxInDomain x ctx) ->
                   CtxCompatible (decls;;DeclVar x t) (ExtendContext ctx x t).
 
+Close Scope rlist_scope.
 
 Lemma ctx_compatible_unique : forall (decls:Decls) (ctx ctx':Context),
   CtxCompatible decls ctx ->

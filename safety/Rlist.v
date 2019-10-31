@@ -16,12 +16,16 @@ Inductive rlist {A:Set} : Set :=
   | rnil : rlist
   | rsnoc : rlist -> A -> rlist.
 
-Notation "[ ]" := rnil (format "[ ]").
-Notation "xs ;; x" := (rsnoc xs x) (at level 50, left associativity).
+Notation "[ ]" := rnil (format "[ ]") : rlist_scope.
+Notation "xs ;; x" := (rsnoc xs x) (at level 50, left associativity) 
+                      : rlist_scope.
 
+Open Scope rlist_scope.
 
 Fixpoint RIn {A:Set} (a:A) (rl:rlist (A:=A)) : Prop :=
   match rl with
     | [] => False
     | rl';;x => x = a \/ RIn a rl'
   end.
+
+Close Scope rlist_scope.
