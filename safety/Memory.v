@@ -14,7 +14,7 @@ Require Import TensorIR.Safety.Context.
 Require Import TensorIR.Safety.Rlist.
 Require Import TensorIR.Safety.Syntax.
 Require Import TensorIR.Safety.Tensor.
-Require Import TensorIR.Safety.Tuple.
+Require Import TensorIR.Tuple.Tuple.
 
 
 

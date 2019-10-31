@@ -10,7 +10,7 @@
 Require Import PeanoNat.
 
 Require Import TensorIR.Safety.Rlist.
-Require Import TensorIR.Safety.Tuple.
+Require Import TensorIR.Tuple.Tuple.
 
 
 (* Identifier: *)

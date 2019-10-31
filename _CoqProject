@@ -1,0 +1,12 @@
+-R safety TensorIR.Safety
+-R tuple TensorIR.Tuple
+
+tuple/Tuple.v
+
+safety/Syntax.v
+safety/Rlist.v
+safety/Context.v
+safety/Tensor.v
+safety/Memory.v
+safety/Semantics.v
+

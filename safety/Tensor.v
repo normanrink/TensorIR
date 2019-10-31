@@ -25,7 +25,7 @@ Require Import PeanoNat.
 
 Import ListNotations.
 
-Require Import TensorIR.Safety.Tuple.
+Require Import TensorIR.Tuple.Tuple.
 
 
 
