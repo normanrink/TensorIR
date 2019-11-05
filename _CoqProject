@@ -1,5 +1,6 @@
 -R safety TensorIR.Safety
 -R tuple TensorIR.Tuple
+-R equations/deep TensorIR.Equations.Deep
 
 tuple/Tuple.v
 
@@ -9,4 +10,10 @@ safety/Context.v
 safety/Tensor.v
 safety/Memory.v
 safety/Semantics.v
+
+equations/deep/Value.v
+equations/deep/Expr.v
+equations/deep/PreTensor.v
+equations/deep/Tensor.v
+equations/deep/Translation.v
 

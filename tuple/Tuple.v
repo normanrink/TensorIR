@@ -173,6 +173,56 @@ Proof with auto.
     simpl. intuition.
 Qed.
 
+Lemma tup_le_nil_eq_nil : forall i : Tuple, i.<=.[] -> i = [].
+Proof with auto.
+  induction i...
+  inversion 1.
+Qed.
+
+Lemma tup_nil_le_eq_nil : forall i : Tuple, [].<=.i -> i = [].
+Proof with auto.
+  induction i...
+  inversion 1.
+Qed.
+
+Lemma tup_append_preserves_le : 
+  forall i0 t0 : Tuple, i0.<=.t0 -> 
+  forall i1 t1 : Tuple, i1.<=.t1 ->  
+    (i0++i1).<=.(t0++t1).
+Proof with auto.
+  induction i0; intuition.
+  + apply tup_nil_le_eq_nil in H; subst; rewrite ?app_nil_r...
+  + destruct t0; inversion H.
+    specialize IHi0 with t0 i1 t1.
+    apply (IHi0 H2) in H0.
+    constructor...
+Qed.
+
+Lemma tup_le_Sn_le : forall (n m : nat) (i j : Tuple), 
+  (S n::i).<=.(m::j) -> (n::i).<=.(m::j).
+Proof with auto.
+  inversion 1; apply le_Sn_le in H0; constructor...
+Qed.
+
+Lemma le_minus_Sr_le_minus_r (q : nat) : forall (p r : nat), 
+  S r <= q -> p <= q - S r -> p <= q - r.
+Proof with auto.
+  destruct q.
+  + simpl. trivial.
+  + intros p r le_rq le_S.
+    rewrite Nat.sub_succ in le_S.
+    apply Nat.le_le_succ_r in le_S.
+    rewrite minus_Sn_m in le_S...
+    apply le_S_n...
+Qed.
+
+Lemma tup_le_minus_Sk_le_minus_k : forall (n m k: nat) (i j : Tuple), 
+  S k <= m -> (n::i).<=.(m - S k::j) -> (n::i).<=.(m - k::j).
+Proof with auto.
+  inversion 2; constructor...
+  apply le_minus_Sr_le_minus_r...
+Qed.
+
 
 (* Swap (viz. transpose) adjacent entries in a tuple.  *)
 (* Swapping only yields a defined result if there are  *)
