@@ -155,3 +155,125 @@ Example do_quadruple_expr {var : Tuple -> Set} {ctx : Context} {t : Tuple}
 Eval simpl in (fun e => expandLet' (quadruple_expr e)).
 Eval simpl in (fun e => expandLet' (do_quadruple_expr e)).
 
+
+(* Rename the expressions constructor 'Add' into 'EAdd' to
+   avoid a name clash after importing the module 'List':   *)
+
+Definition EAdd {var : Tuple -> Set} {ctx : Context} {t : Tuple} :=
+  @Add var ctx t.
+
+
+Require Import List.
+
+Open Scope list_scope.
+
+(* Introduce relations 'wf' and 'Wf' analogous to Section 17.2.2 of
+   "Certified Programming with Dependent Types" by Adam Chlipala, 2013:
+     - 'wf' is a binary relation on 'expr' that holds precisely if two
+       expressions with different parameters 'var1' and 'var2' have the
+       same structure.
+     - 'Wf' is a unary relation indicating well-formedness of 'Expr',
+       in the sense that 'wf' holds of any two instantiations of 'Expr'
+       with arbitrary parameters 'var1', 'var2'.                        *)
+
+Section well_formed_expr. 
+  Variables var1 var2 : Tuple -> Set.
+
+  Record varEntry := {
+    type   : Tuple;
+    first  : var1 type;
+    second : var2 type;
+  }.
+
+  Inductive wf {ctx : Context} :
+    list varEntry -> forall {t : Tuple},
+                       @expr var1 ctx t -> @expr var2 ctx t -> Prop :=
+    | WfTens   : forall {vars : list varEntry}
+                        {t:Tuple} (ic : InCtx t ctx),
+                 wf vars (Tens ic) (Tens ic)
+    | WfAdd    : forall {vars : list varEntry}
+                        {t:Tuple} 
+                        {e1  e2  : @expr var1 ctx t} 
+                        {e1' e2' : @expr var2 ctx t},
+                 wf vars e1 e1' ->
+                 wf vars e2 e2' ->
+                 wf vars (EAdd e1 e2) (EAdd e1' e2')
+    | WfProj   : forall {vars : list varEntry}
+                        {t:Tuple} {d m:nat}
+                        {le le' : m <= d}
+                        {e : @expr var1 ctx (d::t)} {e' : @expr var2 ctx (d::t)},
+                 wf vars e e' ->
+                 wf vars (Proj le e) (Proj le' e')
+    | WfProd   : forall {vars : list varEntry} 
+                        {t1 t2:Tuple}
+                        {e1 : @expr var1 ctx t1} {e2 : @expr var1 ctx t2}
+                        {e1': @expr var2 ctx t1} {e2': @expr var2 ctx t2},
+                 wf vars e1 e1' ->
+                 wf vars e2 e2' ->
+                 wf vars (Prod e1 e2) (Prod e1' e2')
+    | WfSMul   : forall {vars : list varEntry}
+                        {r:R} {t:Tuple}
+                        {e : @expr var1 ctx t} {e' : @expr var2 ctx t},
+                 wf vars e e' ->
+                 wf vars (SMul r e) (SMul r e')
+    | WfExpa   : forall {vars : list varEntry}
+                        {t:Tuple} {d:nat}
+                        {e : @expr var1 ctx t} {e' : @expr var2 ctx t},
+                 wf vars e e' ->
+                 wf vars (Expa d e) (Expa d e')
+    | WfDiag   : forall {vars : list varEntry}
+                        {t:Tuple} {d:nat}
+                        {e : @expr var1 ctx (d::d::t)}
+                        {e' : @expr var2 ctx (d::d::t)},
+                 wf vars e e' ->
+                 wf vars (Diag e) (Diag e')
+    | WfTransp : forall {vars : list varEntry}
+                        {t t':Tuple} {m:nat}
+                        {eq eq' : tup_swap m t = Some t'}
+                        {e  : @expr var1 ctx t} {e' : @expr var2 ctx t},
+                 wf vars e e' ->
+                 wf vars (Transp eq e) (Transp eq' e')
+    | WfRed    : forall {vars : list varEntry}
+                        {t:Tuple} {d:nat}
+                        {e  : @expr var1 ctx (d::t)}
+                        {e' : @expr var2 ctx (d::t)},
+                 wf vars e e' ->
+                 wf vars (Red e) (Red e')
+    | WfVar    : forall {vars : list varEntry}
+                        {t : Tuple}
+                        {x1 : var1 t} {x2 : var2 t},
+                 In {| type:=t; first:=x1; second:=x2 |} vars ->
+                 wf vars (Var x1) (Var x2)
+    | WfLet    : forall {vars : list varEntry}
+                        {tx t : Tuple}
+                        {ex : @expr var1 ctx tx} {ex' : @expr var2 ctx tx}
+                        {f   : var1 tx -> @expr var1 ctx t}
+                        {f'  : var2 tx -> @expr var2 ctx t},
+                 wf vars ex ex' ->
+                 (forall (x : var1 tx) (x' : var2 tx), 
+                    let vars' := {| type:=tx; first:=x; second:=x' |}::vars in
+                    wf vars' (f x) (f' x')) ->
+                 wf vars (Let ex f) (Let ex' f')
+    | WfConv   : forall {vars : list varEntry}
+                        {t:Tuple} {m n:nat}
+                        {le le' : n <= m}
+                        {e  : @expr var1 ctx (m::n::t)}
+                        {e' : @expr var2 ctx (m::n::t)},
+                 wf vars e e' ->
+                 wf vars (Conv le e) (Conv le' e').
+
+  Hint Constructors wf.
+End well_formed_expr.
+
+Arguments varEntry {var1 var2}.
+Arguments first {var1 var2}.
+Arguments second {var1 var2}.
+Arguments type {var1 var2}.
+Arguments wf {var1 var2 ctx}.
+
+
+Definition Wf {ctx : Context} {t : Tuple} (e : Expr ctx t) :=
+  forall (var1 var2 : Tuple -> Set), wf [] t (e var1) (e var2).
+
+Close Scope list_scope.
+

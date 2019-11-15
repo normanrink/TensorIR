@@ -21,7 +21,6 @@
 (*                                                                           *)
 (*****************************************************************************)
 
-
 Require Import TensorIR.Tuple.Tuple.
 Require Import TensorIR.Equations.Deep.Expr.
 Require Import TensorIR.Equations.Deep.Tensor.
@@ -276,5 +275,165 @@ Theorem red_expa_eq_smul {t : Tuple} {d : nat} {ctx : Context} :
     ~= (fun v => @SMul v _ _ (INR (S k)) (e _)).
 Proof.
   intros k e. apply (@red_expa_eq_smul' _ d).
+Qed.
+
+Close Scope val_scope.
+Close Scope pre_scope.
+
+
+Require Import List.
+
+(* Correctness of the expansion of 'Let' expressions, analogous
+   to the treatment in Section 17.2 of "Certified Programming 
+   with Dependent Types" by Adam Chlipala, 2013:                *)
+
+Section correct_let_expansion.
+  Variable ctx : Context.
+
+  Definition v1 := fun t => Tensor t.
+  Definition v2 := (@expr v1 ctx).
+
+  Definition wf_vars {var1 var2 : Tuple -> Set}
+                     (vars : list (@varEntry var1 var2))
+                     (p : @varEntry var1 var2 -> Prop) :=
+    forall ve, In ve vars -> p ve.
+
+  Lemma expandLet'_red_correct' (env : Environment ctx)
+                                (vars : list (@varEntry v1 v2))
+                                {d k : nat} (le : k <= d) {t : Tuple}
+                                (e e' : expr (d::t)) :
+    (forall i, pre (translate' env e) i 
+                 = pre (translate' env (expandLet' e')) i) ->
+    (forall i, tens_red_pre k (translate' env e) i
+                 = tens_red_pre k (translate' env (expandLet' e')) i).
+  Proof with auto.
+    induction k; intuition; simpl; rewrite H...
+    + apply le_Sn_le in le.
+      rewrite (IHk le H)...
+  Qed.
+
+  Lemma expandLet'_conv_correct' (env : Environment ctx)
+                                 (vars : list (@varEntry v1 v2))
+                                 {m n k : nat} (le : k <= n) {t : Tuple}
+                                 (e e' : expr (m::n::t)) :
+    (forall i, pre (translate' env e) i 
+                 = pre (translate' env (expandLet' e')) i) ->
+    (forall i, tens_conv_pre k (translate' env e) i
+                 = tens_conv_pre k (translate' env (expandLet' e')) i).
+  Proof with auto.
+    induction k; intuition; simpl; destruct i...
+    + rewrite H.
+      apply le_Sn_le in le.
+      rewrite (IHk le H)...
+  Qed.
+
+
+  Definition wf_vars_translate' (env : Environment ctx)
+                                (vars : list (@varEntry v1 v2)) :=
+    wf_vars vars (fun ve => forall i,
+                    pre (first ve) i = pre (translate' env (second ve)) i).
+
+  Lemma expandLet'_correct' (env : Environment ctx) {t : Tuple} :
+    forall (vars : list varEntry) (e1 : @expr v1 ctx t) (e2 : @expr v2 ctx t),
+    wf vars t e1 e2 -> 
+      wf_vars_translate' env vars -> forall i,
+          pre (translate' env e1) i = pre (translate' env (expandLet' e2)) i.
+  Proof with auto.
+    intros e1 e2; induction 1; intros Hwfvars i; simpl.
+    + auto.
+    + unfold tens_add_pre, pre_access.
+      rewrite IHwf1... rewrite IHwf2...
+    + unfold tens_proj_pre, pre_access.
+      rewrite IHwf...
+    + unfold tens_prod_pre, pre_access.
+      rewrite IHwf1... rewrite IHwf2...
+    + unfold tens_smul_pre, pre_access.
+      rewrite IHwf...
+    + unfold tens_expa_pre.
+      destruct i...
+      rewrite IHwf...
+    + unfold tens_diag_pre.
+      destruct i...
+    + unfold tens_transp_pre.
+      destruct (tup_swap m i)...
+    + apply expandLet'_red_correct'...
+    + apply Hwfvars in H...
+    + remember (translate' env ex) as x.
+      remember (expandLet' ex') as x'.
+      remember ({| type := tx; first := x; second := x' |} :: vars) as vars'.
+      assert(Hwfvars': wf_vars_translate' env vars').
+      * unfold wf_vars; intros ve; rewrite Heqvars'; destruct 1.
+        - rewrite <- H2; simpl.
+          intro i0; rewrite IHwf...
+        - apply Hwfvars in H2.
+          intro i0; rewrite H2...
+      * rewrite (H1 x x')...
+        subst...
+    + apply expandLet'_conv_correct'...
+  Qed.
+
+  Lemma expandLet'_correct {t : Tuple} : forall (e1 : @expr v1 ctx t)
+                                                (e2 : @expr v2 ctx t),
+    wf [] t e1 e2 -> e1 ~=' expandLet' e2.
+  Proof with auto.
+    unfold equiv'; intros.
+    apply @expandLet'_correct' with (vars:=[])...
+    unfold wf_vars; inversion 1.
+  Qed.
+
+  Theorem expandLet_correct {t : Tuple} :
+    forall (e : Expr ctx t),
+      Wf e -> e ~= (expandLet e).
+  Proof.
+    unfold Wf; intros e HWf.
+    apply (expandLet'_correct); apply HWf.
+  Qed.
+End correct_let_expansion.
+
+
+Section preserves_wf_let_expansion.
+  Variable ctx : Context.
+  Variable t : Tuple.
+
+  Variables var1 var2 : Tuple -> Set.
+
+  Definition v3 := (@expr var1 ctx).
+  Definition v4 := (@expr var2 ctx).
+
+
+  Definition wf_vars_wf_vars' (vars  : list (@varEntry v3 v4))
+                              (vars' : list (@varEntry var1 var2)) :=
+    wf_vars vars (fun ve => wf vars' (type ve) (first ve) (second ve)).
+
+  Lemma expandLet'_preserves_wf' : forall (e1 : @expr v3 ctx t)
+                                          (e2 : @expr v4 ctx t)
+                                          (vars : list varEntry),
+    wf vars t e1 e2 ->
+      forall (vars' : list varEntry), wf_vars_wf_vars' vars vars' ->
+        wf vars' t (expandLet' e1) (expandLet' e2).
+  Proof with auto.
+    intros e1 e2 vars Hwf vars' H.
+    induction Hwf; try constructor...
+    + apply (H {| type := t; first := x1; second := x2 |} H0).
+    + apply (H1 (expandLet' ex) (expandLet' ex')); simpl in *.
+      intros ve [Hve | HIn]...
+      * rewrite <- Hve; apply IHHwf...
+  Qed.
+
+  Lemma expandLet'_preserves_wf : forall (e1 : @expr v3 ctx t)
+                                         (e2 : @expr v4 ctx t),
+    wf [] t e1 e2 -> wf [] t (expandLet' e1) (expandLet' e2).
+  Proof with auto.
+    intros; apply expandLet'_preserves_wf' with (vars:=[])...
+    inversion 1.
+  Qed.
+End preserves_wf_let_expansion.
+
+Theorem expandLet_preserves_Wf {t : Tuple} {ctx : Context} :
+  forall (e : Expr ctx t),
+    Wf e -> Wf (expandLet e).
+Proof.
+  unfold Wf; intros e HWf var1' var2'; unfold expandLet.
+  eapply expandLet'_preserves_wf; apply HWf.
 Qed.
 
