@@ -488,3 +488,23 @@ intros x y z;
   + simpl. rewrite <- assoc. rewrite IHm...
 Qed.
 
+
+Lemma map_reshape {a b : Type} {r s : nat} {sh : NVect r} {sh' : NVect s} :
+  forall (f : a -> b) (rs : DomainT sh' -> DomainT sh) (x : Array sh a),
+    map f (reshape rs x) = reshape rs (map f x).
+Proof.
+  intuition.
+Qed.
+
+
+Lemma split_map_append {a b : Type} {r : nat} {sh : NVect r} {m n : nat} :
+  forall (f : a -> b) (x : Array (m+n::sh) a),
+    let (y0,y1) := split3 x in
+    append3 (map f y0) (map f y1) = map f x.
+Proof with auto.
+  intuition.
+  pose proof (@append_split b r sh m n (map f x)) as H.
+  rewrite <- H.
+  apply functional_extensionality...
+Qed.
+
