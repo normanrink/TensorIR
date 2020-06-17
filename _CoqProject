@@ -1,3 +1,4 @@
+-R arrays TensorIR.Arrays
 -R safety TensorIR.Safety
 -R tuple TensorIR.Tuple
 -R equations/deep TensorIR.Equations.Deep
@@ -21,4 +22,9 @@ equations/deep/Translation.v
 equations/shallow/Vectors.v
 equations/shallow/Domain.v
 equations/shallow/Tensor.v
+
+arrays/Array.v
+arrays/Operations.v
+arrays/Lemmas.v
+
 
